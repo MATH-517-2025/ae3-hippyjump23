@@ -1,0 +1,529 @@
+---
+title: "MATH-517: Assignment 3"
+author: "Filipp Sekatski"
+date: today
+date-format: D MMMM YYYY
+format: pdf
+jupyter: python3
+header-includes:
+  - \newcommand{\m}{\hat{m}}
+  - \newcommand{\be}{\hat{\beta}}
+  - \newcommand{\Su}{\sum_{i=1}^{n}}
+  - \newcommand{\R}{\mathbb{R}}
+  - \newcommand{\diag}{\operatorname{diag}}
+  - \newcommand{\E}{\mathbb{E}}
+  - \newcommand{\AMISE}{\operatorname{AMISE}}
+  - \newcommand{\diff}{\mathop{}\!\mathrm{d}}
+  - \newcommand{\RSS}{\operatorname{RSS}}
+
+---
+
+## Theoretical exercise
+
+We have i.i.d. samples $(x_i, y_i)$ for $i = 1, \dots, n$ from the model 
+$$y_i = m(x_i) + \epsilon_i$$
+and we want to estimate $m$ with some function $\m$.
+For a Kernel $K$ and a bandwidth $h>0$, we define the local linear regression estimator at a point $x$ by 
+$$(\be_0(x), \be_1(x)) = \operatorname{arg}\min_{\beta_0, \beta_1 \in \mathbb{R}} \Su\left( Y_i - \beta_0 - \beta_1(X_i-x) \right)^2 K\left( \frac{X_i-x}{h}\right).$$
+We then have the fitted value $\m(x) = \be_0(x)$. 
+
+1) We want to find $$\be = \begin{bmatrix}
+    \be_0\\
+    \be_1
+\end{bmatrix} =\operatorname{arg}\min_{\beta \in\R^2} (Y-X\beta)^TW(Y-X\beta)$$ where $Y = \begin{bmatrix}
+    Y_1\\
+    \vdots\\
+    Y_n
+\end{bmatrix}, X = \begin{bmatrix}
+    1 & X_1-x\\
+    \vdots  & \vdots\\
+    1 & X_n-x
+\end{bmatrix}$ and $W = \diag\left(K\left(\frac{X_1-x}{h}\right), \dots, K\left( \frac{X_n-x}{h}\right) \right).$
+
+Writing $$f(\beta) = (Y-X\beta)^T W (Y-X\beta) = Y^TWY-2\beta^TX^TWY+\beta^TX^TWX\beta$$ and setting the gradient to be zero (as usual for LS estimators), we find $$
+2X^TWY=2X^TWX\be \implies \be = (X^TWX)^{-1}X^TWY.$$
+Note that $W$ is positive definite so that $X^TWX$ is invertible if $X$ has full rank. Hence we see that $\m = \be_0$ can be written as a weighted average of the observations $$\m(x)= \Su w_{ni}(x)Y_i$$ where $w_{ni}(x)$ depends only on $x, X_i$'s, $K$ and $h$.
+
+2) Now we want to find the exact weights $w_{ni}(x)$. To simplify the notations, let $K_i = K\left(\frac{X_i-x}{h}\right)$ and $Z_i = X_i-x$ for $i= 1,\dots, n$. Also let $A_k = \Su Z_i^kK_i$ for $k=0,1,2$. We have 
+\begin{equation*}
+\begin{split}
+\be & = \left( \begin{bmatrix}
+    1 & \dots & 1\\
+    Z_1 & \dots & Z_n
+\end{bmatrix} 
+\diag\left(K_1, \dots, K_n\right)
+\begin{bmatrix}
+    1 & Z_1\\
+    \vdots & \vdots\\
+    1 & Z_n
+\end{bmatrix}
+\right)^{-1}\\
+& \quad
+ \begin{bmatrix}
+    1 & \dots & 1\\
+    Z_1 & \dots & Z_n
+\end{bmatrix}
+\diag\left(K_1, \dots, K_n\right)Y\\
+& = \left( 
+\begin{bmatrix}
+    K_1 & \dots & K_n\\
+    Z_1 K_1 & \dots & Z_n K_n
+\end{bmatrix}
+\begin{bmatrix}
+    1 & Z_1\\
+    \vdots & \vdots\\
+    1 & Z_n
+\end{bmatrix}
+\right)^{-1}
+\begin{bmatrix}
+    K_1 & \dots & K_n\\
+    Z_1 K_1 & \dots & Z_n K_n
+\end{bmatrix}Y\\
+& = \begin{bmatrix}
+    \Su K_i & \Su K_i Z_i\\
+    \Su K_i Z_i & \Su K_i Z_i^2
+\end{bmatrix}^{-1}
+\begin{bmatrix}
+    K_1 & \dots & K_n\\
+    Z_1 K_1 & \dots & Z_n K_n
+\end{bmatrix}Y\\
+& = \frac{1}{A_0A_2-A_1^2}
+\begin{bmatrix}
+    A_2 & -A_1\\
+    -A_1 & A_0
+\end{bmatrix}
+\begin{bmatrix}
+    K_1 & \dots & K_n\\
+    Z_1 K_1 & \dots & Z_n K_n
+\end{bmatrix}Y\\
+& = \frac{1}{A_0A_2-A_1^2}
+\begin{bmatrix}
+    A_2 K_1 - A_1 Z_1 K_1 & \dots & A_2 K_n - A_1 Z_n K_n\\
+    \dots & \dots & \dots
+\end{bmatrix}Y.
+\end{split}
+\end{equation*}
+Hence by setting $S_{n,k}(x)= \frac{1}{nh}\Su(X_i-x)^kK\left( \frac{X_i-x}{h} \right) = \frac{1}{nh}A_i$ for $i = 0,1,2$, we get that $$w_{nj}(x) = \frac{1}{nh}\frac{K_j\left(S_{n,2}(x)-S_{n,1}(x)Z_1 \right)}{S_{n,0}(x)S_{n,2}(x)-S_{n,1}(x)^2}$$
+for each $j = 1, \dots, n.$ That is 
+$$w_{nj}(x) = \frac{1}{nh}\frac{K\left(\frac{X_i-x}{h}\right)\left(S_{n,2}(x)-S_{n,1}(x)(X_i-x) \right)}{S_{n,0}(x)S_{n,2}(x)-S_{n,1}(x)^2}.$$
+
+3) Finally we want to show that the weights satisfy $\Su w_{ni}(x)=1$. For this we write
+\begin{equation*}
+\begin{split}
+    \Su w_{ni}(x) & = \frac{1}{A_0A_2-A_1^2}\Su \left( K_iA_2-K_iA_1Z_i \right)\\
+    & = \frac{1}{A_0A_2-A_1^2}\left( A_2\Su K_i - A_1\Su K_iZ_i
+    \right)\\
+    & = \frac{A_2A_0 - A_1 A_1}{A_0A_2-A_1^2}=1.
+\end{split}
+\end{equation*}
+
+## Practical exercise
+
+We have $(X_i, Y_i)_{i=1}^{n}$ i.i.d. random vectors where $X_i \sim \operatorname{Beta}(\alpha, \beta)$ and $Y_i = m(X_i)+ \epsilon_i$ with $m(x)=\sin((x/3+0.1)^{-1})$ and $\epsilon_i \sim \mathcal{N}(0,\sigma^2)$. Here is an example of such data for $n=1000, \alpha = 2, \beta = 5$ and $\sigma^2 =1$: 
+
+```{python}
+#| echo: false
+#| message: false
+#| warning: false
+
+import numpy as np
+from scipy.stats import beta
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+
+# Seting a seed for reproducibility
+np.random.seed(12345)
+
+# Parameters for the sample/distribution
+n = 1000
+a, b = 2, 5   
+
+# Define m(x)
+def m(x):
+    return np.sin(1.0 / (x/3.0 + 0.1))
+
+# Generate data
+X = np.random.beta(a, b, size=n)
+epsilon = np.random.normal(0, 1, size=n)
+
+# Compute Y
+Y = m(X) + epsilon
+
+
+# Plot the pdf and histogram of x
+x_0 = np.linspace(0, 1, 100)
+y_0 = beta.pdf(x_0, a, b)
+
+plt.figure()
+plt.hist(X, bins=50, density=True, alpha=1)
+plt.plot(x_0,y_0, label="True beta distribution", color="red")
+plt.xlabel("X")
+plt.ylabel("Distribution")
+plt.title("Plot of beta distribution VS sample data")
+plt.legend()
+
+
+# Plot the data
+plt.figure()
+x_1 = np.linspace(0, 1, 100)
+y_1 = m(x_1)
+plt.plot(x_1,y_1,label="m(x)", color="red") 
+plt.scatter(X, Y, s=10, alpha=0.6, label="Sample")
+plt.xlabel("X")
+plt.ylabel("Y")
+plt.title(r"$Y = m(X) + \epsilon$ with $m(x) = \sin((x/3+0.1)^{-1})$")
+plt.legend()
+
+
+plt.show()
+```
+
+But now imagine that we don't know $m$ and that we have just access to our sample. We could be interested in estimating $m(x) = \E[Y \vert X=x]$. Under assumptions of homoscedasticity and quartic kernel, the optimal bandwidth mnimizing MISE asymptotically is given by 
+$$h_{\AMISE}= n^{-0.2}\left( \frac{35 \sigma^2 |\operatorname{Supp}(X)|}{\theta_{22}} \right)^{0.2}$$
+where $\theta_{22} = \int(m^{''}(x))^2f_X(x)\diff x$.
+Not having any information other than the sample, we estimate $\theta_{22}$ and $\sigma^2$ by performing a linear regression on the data. More precisely, we divide the data into $N$ blocks $\chi_1, \dots, \chi_N$ and for each block $j = 1, \dots, n$ we fit the model $y_i = \beta_{0j} + \beta_{1j} x_i + \beta_{2j} x_i^2 + \beta_{3j} x_i^3 + \beta_{4j} x_i^4 + \epsilon_i$ to obtain $\hat{m}_j(x_i) = \be_{0j} + \be_{1j} x_i + \be_{2j} x_i^2 + \be_{3j} x_i^3 + \be_{4j} x_i^4$. We then have the estimators 
+$$\hat{\theta}_{22}(N) = \frac{1}{n} \Su \sum_{j=1}^{N} (\hat{m}_j^{''}(X_i))^2\lbrace X_i \in \chi_j\rbrace$$
+and
+$$\hat{\sigma}^2(N) = \frac{1}{n-5N}\Su \sum_{j=1}^{N}(Y_i - \hat{m}_j(X_i)^2)\lbrace X_i \in \chi_j\rbrace $$
+
+We are interested in the effect on $h_{\AMISE}$ and our estimators if we vary the size of the data $n$, the number of blocks $N$ or the parameters of the true distribution $\alpha, \beta$. From now on, we fix $\sigma^2 = 1$.
+
+Let's first fix $\alpha = 2$ and $\beta = 5$ and fit the model with only $N = 1$ block. We will see what happens with one simulation as we vary the size of the sample $n$.
+
+```{python}
+#| echo: false
+#| message: false
+#| warning: false
+
+from numpy.polynomial import Polynomial
+
+# Defining a function returning theta_22(N), sigma_hat(N) and RSS(N)
+def values(X,Y,N=1):
+    
+    n = X.shape[0]
+    
+    #Split the data into N blocks
+    X_blocks = np.array_split(X,N)
+    Y_blocks = np.array_split(Y,N)
+
+    # Prepares the design matrix
+    poly = PolynomialFeatures(degree=4, include_bias=True) 
+
+    # Initialize theta_22 and sigma_hat
+    theta_22 = 0.0
+    RSS = 0.0
+
+    #Loop over blocks
+    for k, (X_block, Y_block) in enumerate(zip(X_blocks, Y_blocks)):       
+    
+        # Applies the design matrix to the block in X
+        X_poly = poly.fit_transform(X_block) 
+    
+        # Fit linear regression
+        model = LinearRegression().fit(X_poly, Y_block)
+    
+        #Defining m_hat and its second derivative
+        intercept = model.intercept_[0]
+        coef = model.coef_.ravel()[1:] #ravel() makes a 1D array, [1:] ignores the first term (which is .0)
+
+        p = Polynomial(np.concatenate(([intercept],coef)))
+            
+        def m_hat(x):
+            return p(x)
+
+        def m_hat_2(x):
+            return p.deriv(2)(x)
+    
+        # Initialize the "local" theta_22 and sigma_hat
+        theta_22_j = 0.0
+        RSS_j = 0.0
+    
+        # Loop over each element in the block
+        for i, (elem_X, elem_Y) in enumerate(zip(X_block,Y_block)):     
+        
+            # Suming over one block
+            theta_22_j += m_hat_2(elem_X[0])**2
+            RSS_j += (elem_Y[0]-m_hat(elem_X[0]))**2
+    
+        # Suming over all blocks
+        theta_22 += theta_22_j
+        RSS += RSS_j
+
+    # Final answer
+    theta_22 = theta_22/n
+    sigma_hat = RSS/(n-5*N)
+
+    return theta_22, sigma_hat, RSS
+
+def supp(X): # X is always positive with beta distribution
+    return np.max(X)
+    
+def h_AMISE(X,Y,N=1): 
+    A = values(X,Y,N)
+    theta, sigma, RSS = A[0], A[1], A[2] 
+    
+    n = X.shape[0]
+    
+    h = (n**(-0.2))*((35*supp(X)*sigma/theta)**(0.2))
+    return h
+    
+def N_max(n): #Is always <= than 5
+    return int(max(min(np.floor(n/20), 5), 1))
+     
+def N_opt(X,Y): 
+    
+    n = X.shape[0]
+    N_m = N_max(n)
+    RSS_N_m = values(X,Y,N_m)[2] # It is RSS(N_max)
+    
+    
+    C = np.zeros(N_m)
+    for i in range(N_m): # goes from 0 to N_max-1
+        C[i] = values(X,Y,i+1)[2]/(RSS_N_m/(n-5*N_m))-(n-10*(i+1))
+    
+    return np.argmin(C)+1
+
+
+
+n_ens = np.array([10, 100, 1000, 10000, 100000])
+
+h = np.zeros(5)
+
+a, b = 2, 5
+
+for i, n in enumerate(n_ens):
+    # Generate data
+    X = np.random.beta(a, b, size=n)
+    epsilon = np.random.normal(0, 1, size=n)
+
+    # Compute Y
+    Y = m(X) + epsilon
+
+    # Reshape X and Y to use sklearn, they will be (1 x n) column-vectors
+    X = X.reshape(-1,1) 
+    Y = Y.reshape(-1,1)
+    
+    h[i] = h_AMISE(X,Y,1)
+
+y_ens = n_ens**(-0.2)    
+
+plt.plot(n_ens, h, '-o', label=rf"$\alpha$ = {a}, $\beta$ = {b}")
+plt.xscale('log')   
+plt.xlabel("n")
+plt.ylabel(r"$h_{\operatorname{Amise}}$")
+plt.title(r"Effect of $n$ on optimal $h$ with one block regression")
+plt.legend()
+plt.grid(True, which="both", ls="--")
+plt.show()
+```
+
+We see that in our simulated data, the optimal bandwidth for $n=10$ is smaller than for $n = 100$. It may just be due to randomness and not really reflect a true trend, because 10 data points is very small. We do several simulations and compute the mean in order to correct for randomness.
+
+```{python}
+#| echo: false
+#| message: false
+#| warning: false
+
+n_sim = 10
+
+n_ens = np.array([10, 100, 1000, 10000])
+
+h = np.zeros((n_sim, 4))
+
+
+
+for k in range(n_sim):
+    for i, n in enumerate(n_ens):
+        # Generate data
+        X = np.random.beta(a, b, size=n)
+        epsilon = np.random.normal(0, 1, size=n)
+
+        # Compute Y
+        Y = m(X) + epsilon
+
+        # Reshape X and Y to use sklearn, they will be (1 x n) column-vectors
+        X = X.reshape(-1,1) 
+        Y = Y.reshape(-1,1)
+        
+        h[k, i] = h_AMISE(X,Y,1)
+    
+# Computing the mean result
+mean_h = h.mean(axis=0)    
+ 
+plt.plot(n_ens, mean_h, '-o', label=rf"$\alpha$ = {a}, $\beta$ = {b}")
+plt.xscale('log')   
+plt.xlabel("n")
+plt.ylabel(r"$h_{\operatorname{Amise}}$")
+plt.title(r"Effect of $n$ on optimal $h$ - mean of 10 simulations")
+plt.legend()
+plt.grid(True, which="both", ls="--")
+plt.show()
+```
+
+So in fact we do see that $h$ increases at first before decreasing. Let's now look at what happens for different choices of parameters $\alpha$ and $\beta$. We make 3 simulations for each distribution.
+
+```{python}
+#| echo: false
+#| message: false
+#| warning: false
+
+parameters = np.array([[0.5, 0.5], [5,1], [1,3], [2,2], [2,5]])
+
+n_sim = 3
+
+n_ens = np.array([10, 100, 1000, 10000])
+
+h = np.zeros((n_sim, 4))
+
+for i, (a,b) in enumerate(parameters):
+    for k in range(n_sim):
+        for i, n in enumerate(n_ens):
+            # Generate data
+            X = np.random.beta(a, b, size=n)
+            epsilon = np.random.normal(0, 1, size=n)
+
+            # Compute Y
+            Y = m(X) + epsilon
+
+            # Reshape X and Y to use sklearn, they will be (1 x n) column-vectors
+            X = X.reshape(-1,1) 
+            Y = Y.reshape(-1,1)
+            
+            h[k, i] = h_AMISE(X,Y,1)
+        
+    # Computing the mean result
+    mean_h = h.mean(axis=0)    
+    
+    plt.plot(n_ens, mean_h, '-o', label=rf"$\alpha$ = {a}, $\beta$ = {b}")
+
+plt.xscale('log')   
+plt.xlabel("n")
+plt.ylabel(r"$h_{\operatorname{Amise}}$")
+plt.title(r"Effect of $n$ on optimal $h$ - mean of 3 simulations")
+plt.legend()
+plt.grid(True, which="both", ls="--")
+plt.show()
+    
+```
+
+The trend that we can see is that even if $h$ seems to increase at first, it will eventually decrease as $n$ grows for all distributions. 
+
+Now let's fix $n = 10000$ and vary the number of blocks $N$. We will look on the effect it has on $h$ for the same simulated data.
+
+```{python}
+#| echo: false
+#| message: false
+#| warning: false
+
+n = 10000
+N_ens = np.array([1,2,3,4,5,6,7,8,9,10])
+
+h = np.zeros(10)
+
+for i, (a,b) in enumerate(parameters):
+    
+    # Generate data
+    X = np.random.beta(a, b, size=n)
+    epsilon = np.random.normal(0, 1, size=n)
+
+    # Compute Y
+    Y = m(X) + epsilon
+
+    # Reshape X and Y to use sklearn, they will be (1 x n) column-vectors
+    X = X.reshape(-1,1) 
+    Y = Y.reshape(-1,1)
+
+    for k, N in enumerate(N_ens):
+        h[k] = h_AMISE(X,Y,N)
+
+    plt.plot(N_ens, h,label=rf"$\alpha =$ {a}, $\beta =$ {b}")
+
+plt.xlabel("Number of blocks N")
+plt.ylabel(r"$h_{\operatorname{Amise}}$")
+plt.title(r"Effect of $N$ on optimal $h$")
+plt.legend()    
+plt.show()
+```
+
+It seems that the number of blocks doesn't influence the optimal bandwidth very significatively. One could ask when is it actually more optimal to split the data into blocks. There is an optimal number of blocks $N$ depending on $n$, that minimizes 
+$$
+\frac{\RSS(N)}{\RSS(N_{\max})/(n-5N_{\max})}-(n-10N)
+$$
+where
+$$
+\RSS(N) = \Su \sum_{j=1}^{N}(Y_i - \hat{m}_j(X_i)^2)\lbrace X_i \in \chi_j\rbrace
+$$
+and $N_{\max} = \max\lbrace \min \lbrace \lfloor n/20 \rfloor, 5\rbrace, 1\rbrace \leq 5$. So we see that we limit ourselves with at most 5 blocks. We can simulate some data for different distributions and compute the optimal $N$ in each case. For $n = 1000$ and $\alpha, \beta$ ranging from 0.5 to 2.0 in steps of 0.1, we have the following optimal number of blocks:
+
+```{python}
+#| echo: false
+#| message: false
+#| warning: false
+
+
+n = 1000
+   
+LOL = np.zeros((16,16))
+S = np.zeros((16,16))
+
+x = np.arange(0.5,2.1,0.1)
+
+for i, a in enumerate(x):
+    for j, b in enumerate(x):
+        # Generate data
+        X = np.random.beta(a, b, size=n)
+        epsilon = np.random.normal(0, 1, size=n)
+
+        # Compute Y
+        Y = m(X) + epsilon
+
+        # Reshape X and Y to use sklearn, they will be (1 x n) column-vectors
+        X = X.reshape(-1,1) 
+        Y = Y.reshape(-1,1)
+        
+        N_o = N_opt(X,Y)
+        
+        LOL[i,j] = N_o
+        S[i,j] = values(X,Y, N_o)[1]
+        
+        
+
+# Making a cute image
+fig, ax = plt.subplots(figsize=(8, 8))  
+cax = ax.matshow(LOL, cmap='viridis')  # use a colormap
+
+# Add colorbar
+fig.colorbar(cax)
+
+# Add title, labels, cosmetic things and a crucial comment
+title = f"Heatmap of optimal number of blocks"
+ax.set_title(title)
+ax.set_xlabel(r"$\alpha$")
+ax.set_ylabel(r"$\beta$")
+
+# Set tick positions and labels
+tick_positions = np.arange(len(x))  # 0, 1, ..., 15
+ax.set_xticks(tick_positions)
+ax.set_yticks(tick_positions)
+ax.set_xticklabels([f"{v:.1f}" for v in x])
+ax.set_yticklabels([f"{v:.1f}" for v in x])
+
+plt.show()
+
+```
+
+We don't see any particular pattern. It seems that we cannot know a priori what will be the optimal number of blocks. But it does help in some cases to divide the data into blocks. 
+
+Finally we have a mean estimated $\sigma^2$ in our case.
+
+```{python}
+#| echo: false
+#| message: false
+#| warning: false
+
+print(f"On average, our estimated sigma squared is {np.mean(S)}.")
+
+```
+
+We have seen how the different parameters affect the optimal bandwidth, and confirmed that dividing the data in blocks does help in some cases. 
